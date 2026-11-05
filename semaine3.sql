@@ -40,3 +40,50 @@ INNER JOIN clients c ON cmd.id_client =c.id_client
 INNER JOIN produits p ON lc.id_produit =p.id_produit 
 
 ORDER BY cmd.id_commande,   p.nom ;
+
+-- Exercice 6 : chiffre d'affaires par catégorie (commandes livrées)
+SELECT p.categorie,
+       SUM(lc.quantite * p.prix) AS chiffre_affaires
+FROM lignes_commande lc
+INNER JOIN commandes cmd ON lc.id_commande = cmd.id_commande
+INNER JOIN produits p    ON lc.id_produit = p.id_produit
+WHERE cmd.statut = 'livrée'
+GROUP BY p.categorie
+ORDER BY chiffre_affaires DESC;
+
+-- Exercice 7:
+SELECT c.nom AS client,
+        SUM(lc.quantite*p.prix) AS chiffre_affaire
+FROM lignes_commande lc
+INNER JOIN commandes cmd ON lc.id_commande = cmd.id_commande
+INNER JOIN clients c ON cmd.id_client =c.id_client
+INNER JOIN produits p ON lc.id_produit =p.id_produit
+WHERE cmd.statut ='livrée'
+GROUP BY c.nom, c.id_client
+HAVING SUM(lc.quantite * p.prix) >(SELECT AVG(t.chiffre_affaire)
+FROM (SELECT  SUM(lc.quantite*p.prix) AS chiffre_affaire
+FROM lignes_commande lc
+INNER JOIN commandes cmd ON lc.id_commande = cmd.id_commande
+INNER JOIN clients c ON cmd.id_client =c.id_client
+INNER JOIN produits p ON lc.id_produit =p.id_produit
+WHERE cmd.statut ='livrée'
+GROUP BY c.nom, c.id_client
+   ) t ) ;
+
+-- Exercice 7 : clients dont le chiffre d'affaires dépasse la moyenne
+WITH ca_client AS (
+    SELECT c.id_client,
+           c.nom,
+           SUM(lc.quantite * p.prix) AS chiffre_affaires
+    FROM lignes_commande lc
+    INNER JOIN commandes cmd ON lc.id_commande = cmd.id_commande
+    INNER JOIN clients c     ON cmd.id_client = c.id_client
+    INNER JOIN produits p    ON lc.id_produit = p.id_produit
+    WHERE cmd.statut = 'livrée'
+    GROUP BY c.id_client, c.nom
+)
+SELECT nom,
+       chiffre_affaires
+FROM ca_client
+WHERE chiffre_affaires > (SELECT AVG(chiffre_affaires) FROM ca_client)
+ORDER BY chiffre_affaires DESC;
